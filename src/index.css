@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif: 'Instrument Serif', 'Playfair Display', Georgia, serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+
+  body {
+    background-color: #0F110E;
+    color: #F5F5F0;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+}
+
+.font-editorial-serif {
+  font-family: 'Instrument Serif', 'Playfair Display', Georgia, serif;
+}
+
+.font-editorial-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Editorial theme utilities */
+.bg-editorial-dark {
+  background-color: #0F110E;
+}
+
+.bg-editorial-card {
+  background-color: #161815;
+}
+
+.bg-editorial-surface {
+  background-color: #1E211D;
+}
+
+.bg-editorial-accent {
+  background-color: #FF6B35;
+}
+
+.text-editorial-accent {
+  color: #FF6B35;
+}
+
+.border-editorial {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.border-editorial-subtle {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.border-editorial-accent {
+  border-color: #FF6B35;
+}
+
+/* Custom scrollbars for editorial dark feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0F110E;
+}
+::-webkit-scrollbar-thumb {
+  background: #2A2E28;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FF6B35;
+}

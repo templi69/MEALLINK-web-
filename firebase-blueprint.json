@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profiles",
+      "description": "User accounts with portal roles",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["email", "role", "name"]
+    },
+    "orders": {
+      "title": "Orders",
+      "description": "Food delivery orders",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "restaurantName": { "type": "string" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string" },
+        "transitProgressPercent": { "type": "number" },
+        "responsibility": { "type": "string" }
+      },
+      "required": ["id", "customerName", "restaurantName", "totalAmount", "status"]
+    },
+    "tickets": {
+      "title": "Support Tickets",
+      "description": "Customer and rider support tickets",
+      "properties": {
+        "id": { "type": "string" },
+        "userName": { "type": "string" },
+        "userType": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string" },
+        "priority": { "type": "string" },
+        "requiresAdminApproval": { "type": "boolean" },
+        "adminApprovalStatus": { "type": "string" }
+      },
+      "required": ["id", "userName", "subject", "message", "status"]
+    },
+    "incidents": {
+      "title": "Incidents",
+      "description": "Emergency and safety incident reports",
+      "properties": {
+        "id": { "type": "string" },
+        "riderName": { "type": "string" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "type", "description", "status"]
+    },
+    "config": {
+      "title": "Platform Settings",
+      "description": "System configs like fuel pricing and happiness metrics",
+      "properties": {
+        "petrolPrice": { "type": "number" },
+        "basePerKm": { "type": "number" }
+      }
+    }
+  }
+}

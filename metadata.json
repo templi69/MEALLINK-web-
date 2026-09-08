@@ -1,0 +1,6 @@
+{
+  "name": "MealLink",
+  "description": "Enterprise food delivery ecosystem featuring 5 independent portals: Customer App, Rider App, Merchant Portal, Customer Support Ops Portal, and Admin Ops Command Center.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
