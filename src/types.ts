@@ -172,3 +172,14 @@ export interface IncidentReport {
   reassuranceSent: boolean;
   timestamp: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  orderId: string;
+  senderRole: 'customer' | 'restaurant' | 'rider' | 'system' | 'support' | 'admin';
+  senderName: string;
+  senderAvatar?: string;
+  content: string;
+  timestamp: string;
+  isSystemNotice?: boolean;
+}

@@ -15,7 +15,8 @@ import {
   FuelEngineConfig,
   EcosystemHappiness,
   Restaurant,
-  Rider
+  Rider,
+  ChatMessage
 } from '../types';
 
 export const DEFAULT_FUEL_CONFIG: FuelEngineConfig = {
@@ -56,7 +57,7 @@ export async function initializeFirestoreDatabase() {
 
 // Clear all database collections in real-time
 export async function clearAllDatabaseRecords() {
-  const collections = ['orders', 'tickets', 'incidents', 'restaurants', 'riders'];
+  const collections = ['orders', 'tickets', 'incidents', 'restaurants', 'riders', 'chat_messages'];
   for (const collName of collections) {
     const colRef = collection(db, collName);
     const snap = await getDocs(colRef);
@@ -132,7 +133,30 @@ export function subscribeToHappiness(onUpdate: (happiness: EcosystemHappiness) =
   }, (err) => console.warn('Happiness listener fallback:', err));
 }
 
+export function subscribeToChatMessages(onUpdate: (messages: ChatMessage[]) => void) {
+  return onSnapshot(collection(db, 'chat_messages'), (snapshot) => {
+    const list: ChatMessage[] = [];
+    snapshot.forEach((d) => list.push(d.data() as ChatMessage));
+    // Sort chronologically (oldest to newest)
+    list.sort((a, b) => new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime());
+    onUpdate(list);
+  }, (err) => console.warn('Chat messages listener fallback:', err));
+}
+
 // DB Write Helpers
+export async function saveChatMessageToDb(message: ChatMessage) {
+  try {
+    const cleanData: Record<string, any> = {};
+    for (const [key, value] of Object.entries(message)) {
+      if (value !== undefined) {
+        cleanData[key] = value;
+      }
+    }
+    await setDoc(doc(db, 'chat_messages', message.id), cleanData, { merge: true });
+  } catch (err) {
+    console.error('Error saving chat message to Firestore:', err);
+  }
+}
 export async function saveRestaurantToDb(restaurant: Restaurant) {
   try {
     await setDoc(doc(db, 'restaurants', restaurant.id), restaurant, { merge: true });
@@ -283,5 +307,74 @@ export async function seedStarterDemoData() {
 
   await saveRestaurantToDb(starterShop);
   await saveRiderToDb(starterRider);
+
+  const starterOrder: Order = {
+    id: 'ORD-1042',
+    customerName: 'Ayesha Siddiqui',
+    customerPhone: '+92 300 1234567',
+    deliveryAddress: 'Apartment 4B, Gulberg Heights, Lahore',
+    restaurantId: starterShop.id,
+    restaurantName: starterShop.name,
+    restaurantImage: starterShop.bannerImage,
+    items: [
+      { item: starterShop.menuItems[0], quantity: 2 },
+      { item: starterShop.menuItems[3], quantity: 1 },
+    ],
+    subtotal: 850,
+    baseDeliveryFee: 60,
+    finalDeliveryFee: 70,
+    platformFee: 15,
+    totalAmount: 935,
+    status: 'preparing',
+    restaurantPromiseMins: 20,
+    createdAt: new Date().toISOString(),
+    estimatedDeliveryMins: 18,
+    responsibility: 'none',
+    transitProgressPercent: 20,
+    riderBids: [],
+    assignedRider: starterRider,
+  };
+
+  await saveOrderToDb(starterOrder);
+
+  // Seed sample aligned tri-party messages
+  await saveChatMessageToDb({
+    id: 'msg-seed-1',
+    orderId: starterOrder.id,
+    senderRole: 'system',
+    senderName: 'MealLink Dispatch',
+    content: `🎉 Order #${starterOrder.id} placed! Customer (Ayesha), Kitchen (${starterShop.name}), and Rider (${starterRider.name}) are connected.`,
+    timestamp: '12:45 PM',
+    isSystemNotice: true,
+  });
+
+  await saveChatMessageToDb({
+    id: 'msg-seed-2',
+    orderId: starterOrder.id,
+    senderRole: 'restaurant',
+    senderName: `${starterShop.name} (Kitchen)`,
+    senderAvatar: starterShop.bannerImage,
+    content: '🍳 Dum Biryani is in final dum packaging. Will be ready at the pickup counter in 5 mins.',
+    timestamp: '12:47 PM',
+  });
+
+  await saveChatMessageToDb({
+    id: 'msg-seed-3',
+    orderId: starterOrder.id,
+    senderRole: 'rider',
+    senderName: `${starterRider.name} (Rider)`,
+    senderAvatar: starterRider.avatar,
+    content: '🛵 Hello! I have arrived at the restaurant parking. Waiting for order handoff.',
+    timestamp: '12:49 PM',
+  });
+
+  await saveChatMessageToDb({
+    id: 'msg-seed-4',
+    orderId: starterOrder.id,
+    senderRole: 'customer',
+    senderName: 'Ayesha (Customer)',
+    content: '🙏 Thank you both! Gate buzzer code is #402 when you arrive.',
+    timestamp: '12:50 PM',
+  });
 }
 

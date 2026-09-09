@@ -10,7 +10,8 @@ import {
   EcosystemHappiness,
   MenuItem,
   RiderBid,
-  PortalUser
+  PortalUser,
+  ChatMessage
 } from './types';
 import { INITIAL_FUEL_CONFIG } from './data/mockData';
 import { Navbar } from './components/Navbar';
@@ -22,6 +23,7 @@ import { AdminPortal } from './components/AdminPortal';
 import { SimulationControls } from './components/SimulationControls';
 import { SideMenu } from './components/SideMenu';
 import { PortalLoginModal } from './components/PortalLoginModal';
+import { RobloxOrderChat } from './components/RobloxOrderChat';
 import {
   initializeFirestoreDatabase,
   subscribeToRestaurants,
@@ -31,6 +33,8 @@ import {
   subscribeToIncidents,
   subscribeToFuelConfig,
   subscribeToHappiness,
+  subscribeToChatMessages,
+  saveChatMessageToDb,
   saveRestaurantToDb,
   deleteRestaurantFromDb,
   saveRiderToDb,
@@ -52,6 +56,7 @@ export default function App() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [riders, setRiders] = useState<Rider[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [fuelConfig, setFuelConfig] = useState<FuelEngineConfig>(INITIAL_FUEL_CONFIG);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
@@ -63,7 +68,14 @@ export default function App() {
 
   // Authenticated User Session Profiles per Portal Category
   const [authenticatedUsers, setAuthenticatedUsers] = useState<Record<ViewMode, PortalUser | null>>({
-    customer: { uid: 'demo-cust', email: 'customer@meallink.com', name: 'Ayesha Siddiqui', role: 'customer', portalName: 'Customer App' },
+    customer: {
+      uid: 'demo-cust',
+      email: 'customer@meallink.com',
+      name: 'Ayesha Siddiqui',
+      role: 'customer',
+      portalName: 'Customer App',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+    },
     rider: null,
     restaurant: null,
     support: null,
@@ -100,6 +112,10 @@ export default function App() {
       setFuelConfig(updatedFuel);
     });
 
+    const unsubChat = subscribeToChatMessages((updatedMsgs) => {
+      setChatMessages(updatedMsgs);
+    });
+
     return () => {
       unsubRestaurants();
       unsubRiders();
@@ -107,6 +123,7 @@ export default function App() {
       unsubTickets();
       unsubIncidents();
       unsubFuel();
+      unsubChat();
     };
   }, []);
 
@@ -209,6 +226,17 @@ export default function App() {
     };
 
     await saveOrderToDb(newOrder);
+
+    // Automatically initialize the aligned tri-party chat for Customer + Restaurant + Rider
+    await saveChatMessageToDb({
+      id: `sys-${newOrder.id}-init`,
+      orderId: newOrder.id,
+      senderRole: 'system',
+      senderName: 'MealLink Dispatch',
+      content: `🎉 Order #${newOrder.id} placed! Customer (${newOrder.customerName}), Kitchen (${restaurant.name}), and Delivery Rider have been connected in this aligned chat.`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isSystemNotice: true,
+    });
   };
 
   // Accept Rider Bid
@@ -244,6 +272,17 @@ export default function App() {
     };
 
     await saveOrderToDb(updated);
+
+    // Announce assigned rider in tri-party chat
+    await saveChatMessageToDb({
+      id: `sys-${order.id}-rider-${Date.now()}`,
+      orderId: order.id,
+      senderRole: 'system',
+      senderName: 'Dispatch System',
+      content: `🛵 Rider ${bid.riderName} accepted the order and joined the aligned chat! (ETA: ${bid.etaMins} mins)`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isSystemNotice: true,
+    });
   };
 
   // Simulate or submit rider bid for active order
@@ -326,6 +365,16 @@ export default function App() {
       actualPrepMins: 14,
     };
     await saveOrderToDb(updated);
+
+    await saveChatMessageToDb({
+      id: `sys-${order.id}-ready-${Date.now()}`,
+      orderId: order.id,
+      senderRole: 'system',
+      senderName: 'Kitchen Counter',
+      content: `🍳 ${order.restaurantName} marked order as Ready for Pickup on the counter!`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isSystemNotice: true,
+    });
   };
 
   // Rider transit actions
@@ -340,6 +389,16 @@ export default function App() {
       transitProgressPercent: 30,
     };
     await saveOrderToDb(updated);
+
+    await saveChatMessageToDb({
+      id: `sys-${order.id}-pickup-${Date.now()}`,
+      orderId: order.id,
+      senderRole: 'system',
+      senderName: 'Rider Transit',
+      content: `🚀 Rider ${order.assignedRider?.name || 'Partner Rider'} picked up the package and is in transit to customer!`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isSystemNotice: true,
+    });
   };
 
   const handleDeliverOrder = async (orderId: string) => {
@@ -353,6 +412,16 @@ export default function App() {
       transitProgressPercent: 100,
     };
     await saveOrderToDb(updated);
+
+    await saveChatMessageToDb({
+      id: `sys-${order.id}-delivered-${Date.now()}`,
+      orderId: order.id,
+      senderRole: 'system',
+      senderName: 'MealLink Dispatch',
+      content: `✅ Package delivered safely to customer! Thank you to Customer, Kitchen, and Rider for great aligned coordination.`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isSystemNotice: true,
+    });
   };
 
   const handleRiderExplainDelay = async (orderId: string, reason: string) => {
@@ -666,6 +735,14 @@ export default function App() {
         onSimulateKitchenDelay={handleSimulateKitchenDelay}
         onSimulateRiderSos={handleSimulateRiderSos}
         onSimulateCustomerSlaTicket={handleSimulateCustomerSlaTicket}
+      />
+
+      {/* Roblox-Style Slide-Up Floating Order Tri-Party Chat */}
+      <RobloxOrderChat
+        orders={orders}
+        chatMessages={chatMessages}
+        currentViewMode={viewMode}
+        currentUser={authenticatedUsers[viewMode]}
       />
     </div>
   );
